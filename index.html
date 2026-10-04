@@ -15,7 +15,9 @@
     button { width: 100%; background: #1a73e8; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; margin-bottom: 5px; }
     button.logout { background: #d93025; }
     button:active { opacity: 0.8; }
+    button:disabled { background: #9aa0a6; cursor: not-allowed; }
     .status { font-size: 12px; font-weight: normal; }
+    .msg-feedback { font-size: 12px; font-weight: bold; text-align: center; margin-top: 5px; height: 16px; }
     .user-info { display: flex; justify-content: space-between; align-items: center; background: #e8f0fe; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
     #login-box { display: block; }
     #panel-box { display: none; }
@@ -121,7 +123,8 @@
     function cargarCarteles(uid) {
       const contenedor = document.getElementById('lista-carteles');
 
-      db.ref('usuarios/' + uid + '/carteles').on('value', (snapshot) => {
+      // Se usa .once() para cargar la interfaz rápidamente una sola vez sin tirones
+      db.ref('usuarios/' + uid + '/carteles').once('value').then((snapshot) => {
         const data = snapshot.val() || {};
         contenedor.innerHTML = '';
         
@@ -134,10 +137,11 @@
           card.innerHTML = `
             <div class="card-header">
               <span>Cartel #${id}</span>
-              <span class="status">${urlActual ? '✅ Asignado' : '⚪ Libre'}</span>
+              <span class="status" id="status-${id}">${urlActual ? '✅ Asignado' : '⚪ Libre'}</span>
             </div>
             <input type="url" id="input-${id}" value="${urlActual}" placeholder="https://g.page/r/...">
-            <button onclick="guardarCartel('${id}')">Guardar Link</button>
+            <button id="btn-${id}" onclick="guardarCartel('${id}')">Guardar Link</button>
+            <div class="msg-feedback" id="msg-${id}"></div>
           `;
           contenedor.appendChild(card);
         }
@@ -146,11 +150,30 @@
 
     function guardarCartel(id) {
       if (!usuarioActual) return;
-      const url = document.getElementById(`input-${id}`).value;
+      const input = document.getElementById(`input-${id}`);
+      const btn = document.getElementById(`btn-${id}`);
+      const statusSpan = document.getElementById(`status-${id}`);
+      const msgBox = document.getElementById(`msg-${id}`);
+      const url = input.value.trim();
+
+      btn.disabled = true;
+      msgBox.style.color = '#1a73e8';
+      msgBox.innerText = 'Guardando...';
       
       db.ref('usuarios/' + usuarioActual.uid + '/carteles/' + id).set(url).then(() => {
-        alert(`¡Cartel #${id} guardado correctamente!`);
-      }).catch((err) => alert('Error: ' + err.message));
+        btn.disabled = false;
+        msgBox.style.color = '#1e8e3e';
+        msgBox.innerText = '¡Guardado con éxito!';
+        
+        // Actualiza el indicador sin recargar toda la lista
+        statusSpan.innerText = url ? '✅ Asignado' : '⚪ Libre';
+
+        setTimeout(() => { msgBox.innerText = ''; }, 2500);
+      }).catch((err) => {
+        btn.disabled = false;
+        msgBox.style.color = '#d93025';
+        msgBox.innerText = 'Error al guardar.';
+      });
     }
   </script>
 </body>
