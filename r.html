@@ -37,11 +37,22 @@
     if (vendedor && id) {
       db.ref('usuarios/' + vendedor + '/carteles/' + id).once('value', function(snapshot) {
         var destino = snapshot.val();
-        if (destino) {
+        
+        if (destino && typeof destino === 'string' && destino.trim() !== '') {
+          destino = destino.trim();
+          
           if (!destino.startsWith('http://') && !destino.startsWith('https://')) {
             destino = 'https://' + destino;
           }
-          window.location.href = destino;
+
+          // Validación de seguridad para asegurar que la URL sea válida
+          try {
+            var urlValida = new URL(destino);
+            window.location.href = urlValida.href;
+          } catch(e) {
+            document.getElementById('titulo').innerText = 'Enlace no válido';
+            document.getElementById('mensaje').innerText = 'El enlace asignado a este cartel no tiene un formato web válido.';
+          }
         } else {
           document.getElementById('titulo').innerText = 'Cartel #' + id;
           document.getElementById('mensaje').innerText = 'Este cartel aún no está activado por un comercio.';
