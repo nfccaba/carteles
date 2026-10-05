@@ -13,8 +13,12 @@
     .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
     .card-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 16px; margin-bottom: 10px; }
     
-    input[type="url"], input[type="email"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; margin-bottom: 6px; }
+    input[type="url"], input[type="email"], input[type="password"], input[type="text"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; margin-bottom: 6px; }
     input.input-error { border-color: #d93025; background-color: #fce8e6; }
+
+    .search-box { position: sticky; top: 10px; z-index: 100; background: #ffffff; padding: 12px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin-bottom: 15px; border: 1px solid #e0e0e0; }
+    .search-box label { font-size: 12px; font-weight: bold; color: #5f6368; display: block; margin-bottom: 4px; }
+    .search-box input { margin-bottom: 0; font-size: 15px; border-color: #1a73e8; }
 
     .quick-tools { display: flex; gap: 6px; margin-bottom: 8px; }
     .btn-quick { background: #f1f3f4; color: #3c4043; border: 1px solid #dadce0; padding: 6px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; flex: 1; text-align: center; }
@@ -22,7 +26,6 @@
     .btn-clear { background: #fce8e6; color: #c5221f; border-color: #fad2cf; flex: 0.6; }
 
     button { width: 100%; background: #1a73e8; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; margin-bottom: 5px; }
-    button.scan-btn { background: #34a853; margin-bottom: 15px; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; }
     button.logout { background: #d93025; }
     button:active { opacity: 0.8; }
     button:disabled { background: #9aa0a6; cursor: not-allowed; }
@@ -32,8 +35,6 @@
     .warning-box { color: #b06000; font-size: 11px; font-weight: 600; margin-bottom: 6px; display: none; }
     .user-info { display: flex; justify-content: space-between; align-items: center; background: #e8f0fe; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; }
     
-    #scanner-container { display: none; background: white; padding: 10px; border-radius: 12px; margin-bottom: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    #reader { width: 100%; }
     #login-box { display: block; }
     #panel-box { display: none; }
   </style>
@@ -58,12 +59,10 @@
         <button class="logout" style="width: auto; padding: 5px 10px; margin: 0;" onclick="cerrarSesion()">Salir</button>
       </div>
 
-      <!-- BOTÓN Y LECTOR DE CÁMARA -->
-      <button class="scan-btn" onclick="toggleEscaner()">📷 Escanear Cartel con Cámara</button>
-      
-      <div id="scanner-container">
-        <div id="reader"></div>
-        <button style="background: #5f6368; margin-top: 10px;" onclick="cerrarEscaner()">Cancelar Escaneo</button>
+      <!-- BUSCADOR RÁPIDO DE CARTELES -->
+      <div class="search-box">
+        <label for="buscar-cartel">🔍 Buscar Cartel por Número:</label>
+        <input type="number" id="buscar-cartel" placeholder="Ej: 5 o 005" oninput="filtrarCartel()">
       </div>
 
       <div id="lista-carteles">Cargando carteles...</div>
@@ -73,9 +72,6 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-  <!-- Librería gratuita para lectura de QR con cámara -->
-  <script src="https://unpkg.com/html5-qrcode"></script>
 
   <script>
     const firebaseConfig = {
@@ -96,7 +92,6 @@
     const db = firebase.database();
 
     let usuarioActual = null;
-    let html5QrcodeScanner = null;
 
     auth.onAuthStateChanged((user) => {
       if (user) {
@@ -151,8 +146,10 @@
           const urlActual = data[id] || '';
           
           const card = document.createElement('div');
-          card.className = 'card';
+          card.className = 'card cartel-item';
           card.id = `card-${id}`;
+          card.setAttribute('data-id', id);
+          card.setAttribute('data-num', i);
           card.innerHTML = `
             <div class="card-header">
               <span>Cartel #${id}</span>
@@ -169,6 +166,22 @@
             <div class="msg-feedback" id="msg-${id}"></div>
           `;
           contenedor.appendChild(card);
+        }
+      });
+    }
+
+    function filtrarCartel() {
+      const query = document.getElementById('buscar-cartel').value.trim();
+      const carteles = document.querySelectorAll('.cartel-item');
+
+      carteles.forEach((card) => {
+        const idPadded = card.getAttribute('data-id'); // ej: "005"
+        const numSimple = card.getAttribute('data-num'); // ej: "5"
+
+        if (!query || idPadded.includes(query) || numSimple === query) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
         }
       });
     }
@@ -200,8 +213,8 @@
       let errorMsg = '';
 
       if (val.length > 0) {
-        if (val.startsWith(' ') || val.endsWith(' ')) {
-          errorMsg = '⚠️ Cuidado: Hay espacios en blanco al inicio o al final.';
+        if (val.includes(' ')) {
+          errorMsg = '⚠️ Cuidado: Hay un espacio en blanco en el enlace.';
         } else if (!val.startsWith('http://') && !val.startsWith('https://')) {
           errorMsg = '⚠️ Falta el "https://" al inicio del enlace.';
         }
@@ -223,7 +236,9 @@
       const btn = document.getElementById(`btn-${id}`);
       const statusSpan = document.getElementById(`status-${id}`);
       const msgBox = document.getElementById(`msg-${id}`);
-      const url = input.value.trim();
+      
+      const url = input.value.replace(/\s+/g, '');
+      input.value = url;
 
       btn.disabled = true;
       msgBox.style.color = '#1a73e8';
@@ -243,50 +258,6 @@
         msgBox.style.color = '#d93025';
         msgBox.innerText = 'Error al guardar.';
       });
-    }
-
-    function toggleEscaner() {
-      const box = document.getElementById('scanner-container');
-      box.style.display = 'block';
-
-      if (!html5QrcodeScanner) {
-        html5QrcodeScanner = new Html5Qrcode("reader");
-      }
-
-      html5QrcodeScanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 220, height: 220 } },
-        (decodedText) => {
-          const match = decodedText.match(/vendedor=.*&v=(\d{3})/) || decodedText.match(/v=(\d{3})/) || decodedText.match(/id=(\d{3})/);
-          if (match && match[1]) {
-            const idEncontrado = match[1];
-            cerrarEscaner();
-            
-            const targetCard = document.getElementById(`card-${idEncontrado}`);
-            if (targetCard) {
-              targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              targetCard.style.outline = '2px solid #1a73e8';
-              setTimeout(() => targetCard.style.outline = 'none', 3000);
-            }
-          }
-        },
-        (errorMessage) => { }
-      ).catch(err => {
-        alert("No se pudo acceder a la cámara. Revisa los permisos del navegador.");
-        cerrarEscaner();
-      });
-    }
-
-    function cerrarEscaner() {
-      if (html5QrcodeScanner) {
-        html5QrcodeScanner.stop().then(() => {
-          document.getElementById('scanner-container').style.display = 'none';
-        }).catch(() => {
-          document.getElementById('scanner-container').style.display = 'none';
-        });
-      } else {
-        document.getElementById('scanner-container').style.display = 'none';
-      }
     }
   </script>
 </body>
