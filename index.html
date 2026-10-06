@@ -289,9 +289,9 @@
       if ((val.startsWith('ChIJ') || val.startsWith('GhIJ')) && !val.includes('/')) {
         input.value = `https://search.google.com/local/writereview?placeid=${val}`;
       } 
-      // 2. Detecta usuario de Instagram con @ (solo si tiene al menos 1 caracter después de la @)
+      // 2. Detecta usuario de Instagram con @ (si tiene al menos 1 caracter después)
       else if (val.startsWith('@') && val.length > 1) {
-        const usuario = val.substring(1); // Remueve únicamente el primer caracter '@'
+        const usuario = val.slice(1).replace(/^\/+/, ''); // Remueve la @ y barras accidentales al inicio
         input.value = `https://www.instagram.com/${usuario}/`;
       }
 
