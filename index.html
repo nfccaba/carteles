@@ -228,7 +228,7 @@
             </div>
             
             <div class="hint-box">
-              💡 <b>Auto-formato:</b> Pegá solo el <code>Place ID</code> o escribí <code>@usuario</code> de Instagram.
+              💡 <b>Auto-formato:</b> Pegá el <code>Place ID</code> o escribí <code>@usuario</code> de Instagram.
             </div>
 
             <div class="quick-tools">
@@ -237,7 +237,7 @@
               <button class="btn-quick btn-clear" onclick="vaciarCampo('${id}')">Vaciar</button>
             </div>
 
-            <input type="text" id="input-${id}" value="${urlActual}" placeholder="Place ID (ChIJ...), @usuario o https://..." oninput="manejarEntradaUrl('${id}')">
+            <input type="text" id="input-${id}" value="${urlActual}" placeholder="Place ID (ChIJ...), @usuario o https://..." oninput="manejarEntradaUrl('${id}')" onchange="manejarEntradaUrl('${id}')" onblur="formatearSalida('${id}')">
             <div class="warning-box" id="warn-${id}"></div>
             <button id="btn-${id}" onclick="guardarCartel('${id}')">Guardar Link</button>
             <div class="msg-feedback" id="msg-${id}"></div>
@@ -281,6 +281,7 @@
       });
     }
 
+    // Convierte en tiempo real solo cuando detecta un formato claro
     function manejarEntradaUrl(id) {
       const input = document.getElementById(`input-${id}`);
       let val = input.value.trim();
@@ -289,14 +290,26 @@
       if ((val.startsWith('ChIJ') || val.startsWith('GhIJ')) && !val.includes('/')) {
         input.value = `https://search.google.com/local/writereview?placeid=${val}`;
       } 
-      // 2. Detecta usuario de Instagram que empiece con @
-      else if (val.startsWith('@')) {
-        const usuarioLimpio = val.replace(/^@+/, ''); // Quita todas las @ iniciales
+      // 2. Detecta Instagram cuando ya se pegó o escribió un usuario completo con @ (mínimo 3 caracteres después del @)
+      else if (/^@[a-zA-Z0-9_.]_{3,}$/.test(val) \vert{}\vert{} /^@[a-zA-Z0-9_.]+\/$/.test(val)) {
+        const usuarioLimpio = val.replace(/^@+/, '').replace(/\/+$/, '');
+        input.value = `https://www.instagram.com/${usuarioLimpio}/`;
+      }
+
+      validarEnlace(id);
+    }
+
+    // Al salir del campo de texto (blur), si el usuario dejó un @nombre, lo formatea
+    function formatearSalida(id) {
+      const input = document.getElementById(`input-${id}`);
+      let val = input.value.trim();
+
+      if (val.startsWith('@')) {
+        const usuarioLimpio = val.replace(/^@+/, '').replace(/\/+$/, '');
         if (usuarioLimpio.length > 0) {
           input.value = `https://www.instagram.com/${usuarioLimpio}/`;
         }
       }
-
       validarEnlace(id);
     }
 
@@ -338,6 +351,7 @@
 
         input.value = texto.trim();
         manejarEntradaUrl(id);
+        formatearSalida(id);
 
         const textoOriginal = btnPaste.innerText;
         btnPaste.innerText = '¡Pegado! ✓';
@@ -376,7 +390,7 @@
         if (val.includes(' ')) {
           errorMsg = '⚠️ Cuidado: Hay un espacio en blanco en el enlace.';
         } else if (!val.startsWith('http://') && !val.startsWith('https://')) {
-          errorMsg = '⚠️️ Falta el "https://" al inicio del enlace.';
+          errorMsg = '⚠️ Falta el "https://" al inicio del enlace.';
         }
       }
 
@@ -398,6 +412,9 @@
       const statusSpan = document.getElementById(`status-${id}`);
       const msgBox = document.getElementById(`msg-${id}`);
       
+      // Aplicar formato por si hace click en Guardar directo sin salir del campo
+      formatearSalida(id);
+
       const url = input.value.replace(/\s+/g, '');
       input.value = url;
 
