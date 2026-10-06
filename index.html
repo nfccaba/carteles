@@ -61,6 +61,7 @@
     .btn-quick { background: #f1f3f4; color: #3c4043; border: 1px solid #dadce0; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; }
     .btn-quick:active { background: #e8eaed; }
     .btn-copy { background: #e8f0fe; color: #1a73e8; border-color: #d2e3fc; }
+    .btn-paste { background: #e6f4ea; color: #137333; border-color: #ceead6; }
     .btn-clear { background: #fce8e6; color: #c5221f; border-color: #fad2cf; }
 
     button { width: 100%; background: #1a73e8; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; margin-bottom: 5px; }
@@ -232,6 +233,7 @@
 
             <div class="quick-tools">
               <button class="btn-quick btn-copy" id="btn-copy-${id}" onclick="copiarLink('${id}')">📋 Copiar</button>
+              <button class="btn-quick btn-paste" id="btn-paste-${id}" onclick="pegarLink('${id}')">📥 Pegar</button>
               <button class="btn-quick btn-clear" onclick="vaciarCampo('${id}')">Vaciar</button>
             </div>
 
@@ -287,9 +289,9 @@
       if ((val.startsWith('ChIJ') || val.startsWith('GhIJ')) && !val.includes('/')) {
         input.value = `https://search.google.com/local/writereview?placeid=${val}`;
       } 
-      // 2. Detecta usuario de Instagram con @ (ej: @miperfil)
-      else if (val.startsWith('@')) {
-        const usuario = val.replace('@', '');
+      // 2. Detecta usuario de Instagram con @ (solo si tiene al menos 1 caracter después de la @)
+      else if (val.startsWith('@') && val.length > 1) {
+        const usuario = val.substring(1); // Remueve únicamente el primer caracter '@'
         input.value = `https://www.instagram.com/${usuario}/`;
       }
 
@@ -322,11 +324,35 @@
       });
     }
 
+    function pegarLink(id) {
+      const input = document.getElementById(`input-${id}`);
+      const btnPaste = document.getElementById(`btn-paste-${id}`);
+
+      navigator.clipboard.readText().then((texto) => {
+        if (!texto) {
+          alert('El portapapeles está vacío.');
+          return;
+        }
+
+        input.value = texto.trim();
+        manejarEntradaUrl(id);
+
+        const textoOriginal = btnPaste.innerText;
+        btnPaste.innerText = '¡Pegado! ✓';
+
+        setTimeout(() => {
+          btnPaste.innerText = textoOriginal;
+        }, 1500);
+      }).catch((err) => {
+        alert('Permiso denegado para leer el portapapeles o navegador no compatible.');
+        console.error('Error al pegar:', err);
+      });
+    }
+
     function vaciarCampo(id) {
       const input = document.getElementById(`input-${id}`);
       const val = input.value.trim();
 
-      // Confirmación previa si ya había un enlace cargado
       if (val.length > 0) {
         const confirmar = confirm(`¿Estás seguro de que querés borrar el enlace del Cartel #${id}?`);
         if (!confirmar) return;
