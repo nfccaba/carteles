@@ -237,7 +237,7 @@
               <button class="btn-quick btn-clear" onclick="vaciarCampo('${id}')">Vaciar</button>
             </div>
 
-            <input type="text" id="input-${id}" value="${urlActual}" placeholder="Place ID (ChIJ...), @usuario o https://..." oninput="manejarEntradaUrl('${id}')" onchange="manejarEntradaUrl('${id}')" onblur="formatearSalida('${id}')">
+            <input type="text" id="input-${id}" value="${urlActual}" placeholder="Place ID (ChIJ...), @usuario o https://..." oninput="manejarEntradaUrl('${id}')" onblur="formatearSalida('${id}')">
             <div class="warning-box" id="warn-${id}"></div>
             <button id="btn-${id}" onclick="guardarCartel('${id}')">Guardar Link</button>
             <div class="msg-feedback" id="msg-${id}"></div>
@@ -281,25 +281,20 @@
       });
     }
 
-    // Convierte en tiempo real solo cuando detecta un formato claro
+    // Convierte en tiempo real únicamente Place IDs
     function manejarEntradaUrl(id) {
       const input = document.getElementById(`input-${id}`);
       let val = input.value.trim();
 
-      // 1. Detecta Place ID de Google (ChIJ... o GhIJ...)
+      // Detecta Place ID de Google (ChIJ... o GhIJ...)
       if ((val.startsWith('ChIJ') || val.startsWith('GhIJ')) && !val.includes('/')) {
         input.value = `https://search.google.com/local/writereview?placeid=${val}`;
-      } 
-      // 2. Detecta Instagram cuando ya se pegó o escribió un usuario completo con @ (mínimo 3 caracteres después del @)
-      else if (/^@[a-zA-Z0-9_.]_{3,}$/.test(val) \vert{}\vert{} /^@[a-zA-Z0-9_.]+\/$/.test(val)) {
-        const usuarioLimpio = val.replace(/^@+/, '').replace(/\/+$/, '');
-        input.value = `https://www.instagram.com/${usuarioLimpio}/`;
       }
 
       validarEnlace(id);
     }
 
-    // Al salir del campo de texto (blur), si el usuario dejó un @nombre, lo formatea
+    // Formatea usuarios de Instagram (@usuario) cuando se sale del campo o se guarda
     function formatearSalida(id) {
       const input = document.getElementById(`input-${id}`);
       let val = input.value.trim();
@@ -412,7 +407,7 @@
       const statusSpan = document.getElementById(`status-${id}`);
       const msgBox = document.getElementById(`msg-${id}`);
       
-      // Aplicar formato por si hace click en Guardar directo sin salir del campo
+      // Convierte @usuario antes de guardar por si no cambió de foco (blur)
       formatearSalida(id);
 
       const url = input.value.replace(/\s+/g, '');
