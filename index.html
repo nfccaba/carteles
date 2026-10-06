@@ -67,9 +67,11 @@
     <!-- PANTALLA DE LOGIN -->
     <div id="login-box" class="card">
       <h2 style="font-size: 16px; margin-bottom: 15px; text-align: center;">Iniciar Sesión</h2>
-      <input type="email" id="email" placeholder="Correo Electrónico">
-      <input type="password" id="password" placeholder="Contraseña">
-      <button onclick="iniciarSesion()">Ingresar</button>
+      <form id="form-login" onsubmit="iniciarSesion(event)">
+        <input type="email" id="email" placeholder="Correo Electrónico" required autocomplete="username">
+        <input type="password" id="password" placeholder="Contraseña" required autocomplete="current-password">
+        <button type="submit" id="btn-ingresar">Ingresar</button>
+      </form>
       <p id="error-login" style="color: red; font-size: 12px; margin-top: 10px; text-align: center; font-weight: bold;"></p>
     </div>
 
@@ -94,4 +96,214 @@
         <input type="number" id="buscar-cartel" placeholder="Ej: 5 o 005" oninput="filtrarCartel()">
       </div>
 
-      <div id="lista-carteles">Cargando carteles...
+      <div id="lista-carteles">Cargando carteles...</div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCC3zrf5vYbgM7lA7ULEBE_e1bGCtt6Krg",
+      authDomain: "nfccaba-5e8d5.firebaseapp.com",
+      databaseURL: "https://nfccaba-5e8d5-default-rtdb.firebaseio.com",
+      projectId: "nfccaba-5e8d5",
+      storageBucket: "nfccaba-5e8d5.firebasestorage.app",
+      messagingSenderId: "104003409871",
+      appId: "1:104003409871:web:eb477d997538e01de3e4ba",
+      measurementId: "G-B1BNGY8WSC"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    let usuarioActual = null;
+
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        usuarioActual = user;
+        document.getElementById('login-box').style.display = 'none';
+        document.getElementById('panel-box').style.display = 'block';
+        document.getElementById('user-email').innerText = user.email;
+        cargarCarteles(user.uid);
+      } else {
+        usuarioActual = null;
+        document.getElementById('login-box').style.display = 'block';
+        document.getElementById('panel-box').style.display = 'none';
+      }
+    });
+
+    function iniciarSesion(event) {
+      if (event) event.preventDefault();
+
+      const email = document.getElementById('email').value.trim();
+      const pass = document.getElementById('password').value.trim();
+      const errBox = document.getElementById('error-login');
+      const btn = document.getElementById('btn-ingresar');
+
+      errBox.innerText = 'Verificando...';
+      btn.disabled = true;
+
+      if (!email || !pass) {
+        errBox.innerText = 'Ingresá correo y contraseña.';
+        btn.disabled = false;
+        return;
+      }
+
+      auth.signInWithEmailAndPassword(email, pass)
+        .then(() => { 
+          errBox.innerText = ''; 
+          btn.disabled = false;
+        })
+        .catch((err) => {
+          console.error(err);
+          btn.disabled = false;
+          let mensaje = "Error al iniciar sesión.";
+          if (err.code === "auth/wrong-password" || err.code === "auth/user-not-found" || err.code === "auth/invalid-credential" || (err.message && err.message.includes("INVALID_LOGIN_CREDENTIALS"))) {
+            mensaje = "Correo o contraseña incorrectos.";
+          } else if (err.code === "auth/invalid-email") {
+            mensaje = "El correo electrónico no es válido.";
+          } else if (err.code === "auth/too-many-requests") {
+            mensaje = "Muchos intentos fallidos. Intentá más tarde.";
+          }
+          errBox.innerText = mensaje;
+        });
+    }
+
+    function cerrarSesion() {
+      auth.signOut();
+    }
+
+    function cargarCarteles(uid) {
+      const contenedor = document.getElementById('lista-carteles');
+
+      db.ref('usuarios/' + uid + '/carteles').once('value').then((snapshot) => {
+        const data = snapshot.val() || {};
+        contenedor.innerHTML = '';
+        
+        for (let i = 1; i <= 150; i++) {
+          const id = String(i).padStart(3, '0');
+          const urlActual = data[id] || '';
+          
+          const card = document.createElement('div');
+          card.className = 'card cartel-item';
+          card.id = `card-${id}`;
+          card.setAttribute('data-id', id);
+          card.setAttribute('data-num', i);
+          card.innerHTML = `
+            <div class="card-header">
+              <span>Cartel #${id}</span>
+              <span class="status" id="status-${id}">${urlActual ? '✅ Asignado' : '⚪ Libre'}</span>
+            </div>
+            <div class="quick-tools">
+              <button class="btn-quick" onclick="pegarBase('${id}', 'google')">+ Google</button>
+              <button class="btn-quick" onclick="pegarBase('${id}', 'instagram')">+ Instagram</button>
+              <button class="btn-quick btn-clear" onclick="vaciarCampo('${id}')">Vaciar</button>
+            </div>
+            <input type="url" id="input-${id}" value="${urlActual}" placeholder="https://..." oninput="validarEnlace('${id}')">
+            <div class="warning-box" id="warn-${id}"></div>
+            <button id="btn-${id}" onclick="guardarCartel('${id}')">Guardar Link</button>
+            <div class="msg-feedback" id="msg-${id}"></div>
+          `;
+          contenedor.appendChild(card);
+        }
+      });
+    }
+
+    function filtrarCartel() {
+      const query = document.getElementById('buscar-cartel').value.trim();
+      const carteles = document.querySelectorAll('.cartel-item');
+
+      carteles.forEach((card) => {
+        const idPadded = card.getAttribute('data-id'); // ej: "005"
+        const numSimple = card.getAttribute('data-num'); // ej: "5"
+
+        if (!query || idPadded.includes(query) || numSimple === query) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    function pegarBase(id, tipo) {
+      const input = document.getElementById(`input-${id}`);
+      let base = tipo === 'google' 
+        ? 'https://search.google.com/local/writereview?placeid=' 
+        : 'https://www.instagram.com/';
+
+      input.value = base;
+      validarEnlace(id);
+      input.focus();
+      input.setSelectionRange(base.length, base.length);
+    }
+
+    function vaciarCampo(id) {
+      const input = document.getElementById(`input-${id}`);
+      input.value = '';
+      validarEnlace(id);
+      input.focus();
+    }
+
+    function validarEnlace(id) {
+      const input = document.getElementById(`input-${id}`);
+      const warnBox = document.getElementById(`warn-${id}`);
+      const val = input.value;
+
+      let errorMsg = '';
+
+      if (val.length > 0) {
+        if (val.includes(' ')) {
+          errorMsg = '⚠️ Cuidado: Hay un espacio en blanco en el enlace.';
+        } else if (!val.startsWith('http://') && !val.startsWith('https://')) {
+          errorMsg = '⚠️ Falta el "https://" al inicio del enlace.';
+        }
+      }
+
+      if (errorMsg) {
+        input.classList.add('input-error');
+        warnBox.innerText = errorMsg;
+        warnBox.style.display = 'block';
+      } else {
+        input.classList.remove('input-error');
+        warnBox.style.display = 'none';
+      }
+    }
+
+    function guardarCartel(id) {
+      if (!usuarioActual) return;
+      const input = document.getElementById(`input-${id}`);
+      const btn = document.getElementById(`btn-${id}`);
+      const statusSpan = document.getElementById(`status-${id}`);
+      const msgBox = document.getElementById(`msg-${id}`);
+      
+      const url = input.value.replace(/\s+/g, '');
+      input.value = url;
+
+      btn.disabled = true;
+      msgBox.style.color = '#1a73e8';
+      msgBox.innerText = 'Guardando...';
+      
+      db.ref('usuarios/' + usuarioActual.uid + '/carteles/' + id).set(url).then(() => {
+        btn.disabled = false;
+        msgBox.style.color = '#1e8e3e';
+        msgBox.innerText = '¡Guardado con éxito!';
+        
+        statusSpan.innerText = url ? '✅ Asignado' : '⚪ Libre';
+        validarEnlace(id);
+
+        setTimeout(() => { msgBox.innerText = ''; }, 2500);
+      }).catch((err) => {
+        btn.disabled = false;
+        msgBox.style.color = '#d93025';
+        msgBox.innerText = 'Error al guardar.';
+      });
+    }
+  </script>
+</body>
+</html>
