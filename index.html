@@ -19,7 +19,12 @@
     .search-box { position: sticky; top: 10px; z-index: 100; background: #ffffff; padding: 12px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin-bottom: 15px; border: 1px solid #e0e0e0; }
     .search-box-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
     .search-box label { font-size: 12px; font-weight: bold; color: #5f6368; display: block; }
-    .search-box input { margin-bottom: 0; font-size: 15px; border-color: #1a73e8; }
+    .search-box input { margin-bottom: 8px; font-size: 15px; border-color: #1a73e8; }
+
+    /* FILTROS POR ESTADO */
+    .filter-tools { display: flex; gap: 6px; }
+    .btn-filter { flex: 1; padding: 6px 4px; border: 1px solid #dadce0; background: #f8f9fa; color: #3c4043; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; text-align: center; }
+    .btn-filter.active { background: #1a73e8; color: #ffffff; border-color: #1a73e8; }
 
     .btn-finder {
       display: inline-flex;
@@ -40,7 +45,7 @@
       color: #ffffff;
     }
 
-    /* INSTRUCCIONES BREVES DE AUTOFOMATO */
+    /* INSTRUCCIONES BREVES DE AUTOFORMATO */
     .hint-box {
       font-size: 11px;
       color: #5f6368;
@@ -94,7 +99,7 @@
         <button class="logout" style="width: auto; padding: 5px 10px; margin: 0;" onclick="cerrarSesion()">Salir</button>
       </div>
 
-      <!-- BUSCADOR RÁPIDO DE CARTELES -->
+      <!-- BUSCADOR RÁPIDO Y FILTROS -->
       <div class="search-box">
         <div class="search-box-header">
           <label for="buscar-cartel">🔍 Buscar Cartel por Número:</label>
@@ -105,7 +110,13 @@
              📍 BUSCADOR ID
           </a>
         </div>
-        <input type="number" id="buscar-cartel" placeholder="Ej: 5 o 005" oninput="filtrarCartel()">
+        <input type="number" id="buscar-cartel" placeholder="Ej: 5 o 005" oninput="aplicarFiltros()">
+        
+        <div class="filter-tools">
+          <button class="btn-filter active" id="filter-todos" onclick="setFiltroEstado('todos')">Todos</button>
+          <button class="btn-filter" id="filter-asignados" onclick="setFiltroEstado('asignados')">✅ Asignados</button>
+          <button class="btn-filter" id="filter-libres" onclick="setFiltroEstado('libres')">⚪ Libres</button>
+        </div>
       </div>
 
       <div id="lista-carteles">Cargando carteles...</div>
@@ -135,6 +146,7 @@
     const db = firebase.database();
 
     let usuarioActual = null;
+    let filtroEstadoActual = 'todos';
 
     auth.onAuthStateChanged((user) => {
       if (user) {
@@ -207,6 +219,7 @@
           card.id = `card-${id}`;
           card.setAttribute('data-id', id);
           card.setAttribute('data-num', i);
+          card.setAttribute('data-status', urlActual ? 'asignado' : 'libre');
           card.innerHTML = `
             <div class="card-header">
               <span>Cartel #${id}</span>
@@ -229,18 +242,36 @@
           `;
           contenedor.appendChild(card);
         }
+        aplicarFiltros();
       });
     }
 
-    function filtrarCartel() {
+    function setFiltroEstado(tipo) {
+      filtroEstadoActual = tipo;
+      document.querySelectorAll('.btn-filter').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`filter-${tipo}`).classList.add('active');
+      aplicarFiltros();
+    }
+
+    function aplicarFiltros() {
       const query = document.getElementById('buscar-cartel').value.trim();
       const carteles = document.querySelectorAll('.cartel-item');
 
       carteles.forEach((card) => {
         const idPadded = card.getAttribute('data-id'); 
         const numSimple = card.getAttribute('data-num');
+        const status = card.getAttribute('data-status');
 
-        if (!query || idPadded.includes(query) || numSimple === query) {
+        const coincideBusqueda = !query || idPadded.includes(query) || numSimple === query;
+        let coincideEstado = true;
+
+        if (filtroEstadoActual === 'asignados') {
+          coincideEstado = (status === 'asignado');
+        } else if (filtroEstadoActual === 'libres') {
+          coincideEstado = (status === 'libre');
+        }
+
+        if (coincideBusqueda && coincideEstado) {
           card.style.display = 'block';
         } else {
           card.style.display = 'none';
@@ -293,6 +324,14 @@
 
     function vaciarCampo(id) {
       const input = document.getElementById(`input-${id}`);
+      const val = input.value.trim();
+
+      // Confirmación previa si ya había un enlace cargado
+      if (val.length > 0) {
+        const confirmar = confirm(`¿Estás seguro de que querés borrar el enlace del Cartel #${id}?`);
+        if (!confirmar) return;
+      }
+
       input.value = '';
       validarEnlace(id);
       input.focus();
@@ -325,6 +364,7 @@
 
     function guardarCartel(id) {
       if (!usuarioActual) return;
+      const card = document.getElementById(`card-${id}`);
       const input = document.getElementById(`input-${id}`);
       const btn = document.getElementById(`btn-${id}`);
       const statusSpan = document.getElementById(`status-${id}`);
@@ -343,7 +383,10 @@
         msgBox.innerText = '¡Guardado con éxito!';
         
         statusSpan.innerText = url ? '✅ Asignado' : '⚪ Libre';
+        card.setAttribute('data-status', url ? 'asignado' : 'libre');
+        
         validarEnlace(id);
+        aplicarFiltros();
 
         setTimeout(() => { msgBox.innerText = ''; }, 2500);
       }).catch((err) => {
