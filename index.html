@@ -285,14 +285,16 @@
       const input = document.getElementById(`input-${id}`);
       let val = input.value.trim();
 
-      // 1. Detecta Place ID de Google (empieza con ChIJ o GhIJ)
+      // 1. Detecta Place ID de Google (ChIJ... o GhIJ...)
       if ((val.startsWith('ChIJ') || val.startsWith('GhIJ')) && !val.includes('/')) {
         input.value = `https://search.google.com/local/writereview?placeid=${val}`;
       } 
-      // 2. Detecta usuario de Instagram con @ (si tiene al menos 1 caracter después)
-      else if (val.startsWith('@') && val.length > 1) {
-        const usuario = val.slice(1).replace(/^\/+/, ''); // Remueve la @ y barras accidentales al inicio
-        input.value = `https://www.instagram.com/${usuario}/`;
+      // 2. Detecta usuario de Instagram que empiece con @
+      else if (val.startsWith('@')) {
+        const usuarioLimpio = val.replace(/^@+/, ''); // Quita todas las @ iniciales
+        if (usuarioLimpio.length > 0) {
+          input.value = `https://www.instagram.com/${usuarioLimpio}/`;
+        }
       }
 
       validarEnlace(id);
@@ -374,7 +376,7 @@
         if (val.includes(' ')) {
           errorMsg = '⚠️ Cuidado: Hay un espacio en blanco en el enlace.';
         } else if (!val.startsWith('http://') && !val.startsWith('https://')) {
-          errorMsg = '⚠️ Falta el "https://" al inicio del enlace.';
+          errorMsg = '⚠️️ Falta el "https://" al inicio del enlace.';
         }
       }
 
