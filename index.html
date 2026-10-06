@@ -21,7 +21,6 @@
     .search-box label { font-size: 12px; font-weight: bold; color: #5f6368; display: block; }
     .search-box input { margin-bottom: 0; font-size: 15px; border-color: #1a73e8; }
 
-    /* ESTILO PARA EL BOTÓN BUSCADOR DE PLACE ID */
     .btn-finder {
       display: inline-flex;
       align-items: center;
@@ -41,10 +40,22 @@
       color: #ffffff;
     }
 
-    .quick-tools { display: flex; gap: 6px; margin-bottom: 8px; }
-    .btn-quick { background: #f1f3f4; color: #3c4043; border: 1px solid #dadce0; padding: 6px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; flex: 1; text-align: center; }
+    /* INSTRUCCIONES BREVES DE AUTOFOMATO */
+    .hint-box {
+      font-size: 11px;
+      color: #5f6368;
+      background: #f8f9fa;
+      padding: 6px 8px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      line-height: 1.4;
+      border-left: 3px solid #1a73e8;
+    }
+
+    .quick-tools { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+    .btn-quick { background: #f1f3f4; color: #3c4043; border: 1px solid #dadce0; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; }
     .btn-quick:active { background: #e8eaed; }
-    .btn-clear { background: #fce8e6; color: #c5221f; border-color: #fad2cf; flex: 0.6; }
+    .btn-clear { background: #fce8e6; color: #c5221f; border-color: #fad2cf; }
 
     button { width: 100%; background: #1a73e8; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; margin-bottom: 5px; }
     button.logout { background: #d93025; }
@@ -82,7 +93,7 @@
         <button class="logout" style="width: auto; padding: 5px 10px; margin: 0;" onclick="cerrarSesion()">Salir</button>
       </div>
 
-      <!-- BUSCADOR RÁPIDO DE CARTELES CON BOTÓN A GOOGLE MAPS ID -->
+      <!-- BUSCADOR RÁPIDO DE CARTELES -->
       <div class="search-box">
         <div class="search-box-header">
           <label for="buscar-cartel">🔍 Buscar Cartel por Número:</label>
@@ -200,12 +211,16 @@
               <span>Cartel #${id}</span>
               <span class="status" id="status-${id}">${urlActual ? '✅ Asignado' : '⚪ Libre'}</span>
             </div>
+            
+            <div class="hint-box">
+              💡 <b>Auto-formato:</b> Pegá solo el <code>Place ID</code> o escribí <code>@usuario</code> de Instagram.
+            </div>
+
             <div class="quick-tools">
-              <button class="btn-quick" onclick="pegarBase('${id}', 'google')">+ Google</button>
-              <button class="btn-quick" onclick="pegarBase('${id}', 'instagram')">+ Instagram</button>
               <button class="btn-quick btn-clear" onclick="vaciarCampo('${id}')">Vaciar</button>
             </div>
-            <input type="url" id="input-${id}" value="${urlActual}" placeholder="https://..." oninput="validarEnlace('${id}')">
+
+            <input type="text" id="input-${id}" value="${urlActual}" placeholder="Place ID (ChIJ...), @usuario o https://..." oninput="manejarEntradaUrl('${id}')">
             <div class="warning-box" id="warn-${id}"></div>
             <button id="btn-${id}" onclick="guardarCartel('${id}')">Guardar Link</button>
             <div class="msg-feedback" id="msg-${id}"></div>
@@ -220,8 +235,8 @@
       const carteles = document.querySelectorAll('.cartel-item');
 
       carteles.forEach((card) => {
-        const idPadded = card.getAttribute('data-id'); // ej: "005"
-        const numSimple = card.getAttribute('data-num'); // ej: "5"
+        const idPadded = card.getAttribute('data-id'); 
+        const numSimple = card.getAttribute('data-num');
 
         if (!query || idPadded.includes(query) || numSimple === query) {
           card.style.display = 'block';
@@ -231,16 +246,21 @@
       });
     }
 
-    function pegarBase(id, tipo) {
+    function manejarEntradaUrl(id) {
       const input = document.getElementById(`input-${id}`);
-      let base = tipo === 'google' 
-        ? 'https://search.google.com/local/writereview?placeid=' 
-        : 'https://www.instagram.com/';
+      let val = input.value.trim();
 
-      input.value = base;
+      // 1. Detecta Place ID de Google (empieza con ChIJ o GhIJ)
+      if ((val.startsWith('ChIJ') || val.startsWith('GhIJ')) && !val.includes('/')) {
+        input.value = `https://search.google.com/local/writereview?placeid=${val}`;
+      } 
+      // 2. Detecta usuario de Instagram con @ (ej: @miperfil)
+      else if (val.startsWith('@')) {
+        const usuario = val.replace('@', '');
+        input.value = `https://www.instagram.com/${usuario}/`;
+      }
+
       validarEnlace(id);
-      input.focus();
-      input.setSelectionRange(base.length, base.length);
     }
 
     function vaciarCampo(id) {
@@ -253,7 +273,7 @@
     function validarEnlace(id) {
       const input = document.getElementById(`input-${id}`);
       const warnBox = document.getElementById(`warn-${id}`);
-      const val = input.value;
+      const val = input.value.trim();
 
       let errorMsg = '';
 
