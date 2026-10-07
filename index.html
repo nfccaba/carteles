@@ -19,7 +19,6 @@
     .search-box { position: sticky; top: 10px; z-index: 100; background: #ffffff; padding: 12px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin-bottom: 15px; border: 1px solid #e0e0e0; }
     .search-box-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
     .search-box label { font-size: 12px; font-weight: bold; color: #5f6368; display: block; }
-    .search-box input { margin-bottom: 8px; font-size: 15px; border-color: #1a73e8; }
 
     /* FILTROS POR ESTADO */
     .filter-tools { display: flex; gap: 6px; }
@@ -45,7 +44,6 @@
       color: #ffffff;
     }
 
-    /* INSTRUCCIONES BREVES DE AUTOFORMATO */
     .hint-box {
       font-size: 11px;
       color: #5f6368;
@@ -103,7 +101,7 @@
       <!-- BUSCADOR RÁPIDO Y FILTROS -->
       <div class="search-box">
         <div class="search-box-header">
-          <label for="buscar-cartel">🔍 Buscar Cartel por Número:</label>
+          <label for="buscar-cartel">🔍 Buscar por Número, Dirección o Zona:</label>
           <a href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder" 
              target="_blank" 
              class="btn-finder" 
@@ -111,7 +109,7 @@
              📍 BUSCADOR ID
           </a>
         </div>
-        <input type="number" id="buscar-cartel" placeholder="Ej: 5 o 005" oninput="aplicarFiltros()">
+        <input type="text" id="buscar-cartel" placeholder="Ej: 5, Av. Rivadavia, Palermo..." oninput="aplicarFiltros()">
         
         <div class="filter-tools">
           <button class="btn-filter active" id="filter-todos" onclick="setFiltroEstado('todos')">Todos</button>
@@ -129,7 +127,6 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <script>
-    // URL de tu Web App de Google Apps Script configurada
     const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzPxjUwlVCmsmyTkb6bZG9hPveYe3SR_1v8HxV5FMvXbp34fNY-3TqovHzEW0BIqFqxTQ/exec";
 
     const firebaseConfig = {
@@ -152,6 +149,11 @@
     let usuarioActual = null;
     let filtroEstadoActual = 'todos';
 
+    // Desconectar al cerrar pestaña o navegar fuera
+    window.addEventListener('beforeunload', () => {
+      db.goOffline();
+    });
+
     auth.onAuthStateChanged((user) => {
       if (user) {
         usuarioActual = user;
@@ -163,12 +165,14 @@
         usuarioActual = null;
         document.getElementById('login-box').style.display = 'block';
         document.getElementById('panel-box').style.display = 'none';
+        db.goOffline(); // Desconectar si no hay usuario
       }
     });
 
     function iniciarSesion(event) {
       if (event) event.preventDefault();
-
+      db.goOnline(); // Asegurar conexión activa para iniciar sesión
+      
       const email = document.getElementById('email').value.trim();
       const pass = document.getElementById('password').value.trim();
       const errBox = document.getElementById('error-login');
@@ -189,28 +193,19 @@
           btn.disabled = false;
         })
         .catch((err) => {
-          console.error("Error en login:", err);
           btn.disabled = false;
-          let mensaje = "Error al iniciar sesión.";
-          if (err.code === "auth/wrong-password" || err.code === "auth/user-not-found" || err.code === "auth/invalid-credential" || (err.message && err.message.includes("INVALID_LOGIN_CREDENTIALS"))) {
-            mensaje = "Correo o contraseña incorrectos.";
-          } else if (err.code === "auth/invalid-email") {
-            mensaje = "El correo electrónico no es válido.";
-          } else if (err.code === "auth/too-many-requests") {
-            mensaje = "Muchos intentos fallidos. Intentá más tarde.";
-          } else if (err.message) {
-            mensaje = err.message;
-          }
-          errBox.innerText = mensaje;
+          errBox.innerText = "Correo o contraseña incorrectos.";
         });
     }
 
     function cerrarSesion() {
       auth.signOut();
+      db.goOffline();
     }
 
     function cargarCarteles(uid) {
       const contenedor = document.getElementById('lista-carteles');
+      db.goOnline(); // Abrir conexión breve para leer los carteles
 
       db.ref('usuarios/' + uid + '/carteles').once('value').then((snapshot) => {
         const data = snapshot.val() || {};
@@ -218,7 +213,11 @@
         
         for (let i = 1; i <= 150; i++) {
           const id = String(i).padStart(3, '0');
-          const urlActual = data[id] || '';
+          const itemData = data[id] || {};
+          
+          const urlActual = typeof itemData === 'string' ? itemData : (itemData.url || '');
+          const direccionActual = itemData.direccion || '';
+          const zonaActual = itemData.zona || '';
           
           const card = document.createElement('div');
           card.className = 'card cartel-item';
@@ -232,6 +231,9 @@
               <span class="status" id="status-${id}">${urlActual ? '✅ Asignado' : '⚪ Libre'}</span>
             </div>
             
+            <input type="text" id="direccion-${id}" value="${direccionActual}" placeholder="📍 Dirección (ej. Av. Corrientes 1234)" style="margin-bottom: 6px;">
+            <input type="text" id="zona-${id}" value="${zonaActual}" placeholder="🏙️ Zona / Barrio (ej. Centro, Palermo)" style="margin-bottom: 8px;">
+
             <div class="hint-box">
               💡 <b>Auto-formato:</b> Pegá el <code>Place ID</code> o escribí <code>@usuario</code> de Instagram.
             </div>
@@ -250,9 +252,13 @@
           contenedor.appendChild(card);
         }
         aplicarFiltros();
+        
+        // Cerrar conexión una vez cargados los carteles
+        setTimeout(() => { db.goOffline(); }, 1000);
+
       }).catch((err) => {
         console.error("Error al obtener datos de Firebase:", err);
-        contenedor.innerHTML = '<p style="color:red; text-align:center;">Error al cargar datos. Verificá las reglas de Firebase Realtime Database.</p>';
+        contenedor.innerHTML = '<p style="color:red; text-align:center;">Error al cargar datos.</p>';
       });
     }
 
@@ -264,28 +270,28 @@
     }
 
     function aplicarFiltros() {
-      const query = document.getElementById('buscar-cartel').value.trim();
+      const query = document.getElementById('buscar-cartel').value.trim().toLowerCase();
       const carteles = document.querySelectorAll('.cartel-item');
 
       carteles.forEach((card) => {
-        const idPadded = card.getAttribute('data-id'); 
-        const numSimple = card.getAttribute('data-num');
+        const id = card.getAttribute('data-id');
+        const num = card.getAttribute('data-num');
         const status = card.getAttribute('data-status');
+        
+        const direccion = (document.getElementById(`direccion-${id}`)?.value || '').toLowerCase();
+        const zona = (document.getElementById(`zona-${id}`)?.value || '').toLowerCase();
 
-        const coincideBusqueda = !query || idPadded.includes(query) || numSimple === query;
+        const coincideBusqueda = !query || 
+          id.includes(query) || 
+          num === query || 
+          direccion.includes(query) || 
+          zona.includes(query);
+
         let coincideEstado = true;
+        if (filtroEstadoActual === 'asignados') coincideEstado = (status === 'asignado');
+        else if (filtroEstadoActual === 'libres') coincideEstado = (status === 'libre');
 
-        if (filtroEstadoActual === 'asignados') {
-          coincideEstado = (status === 'asignado');
-        } else if (filtroEstadoActual === 'libres') {
-          coincideEstado = (status === 'libre');
-        }
-
-        if (coincideBusqueda && coincideEstado) {
-          card.style.display = 'block';
-        } else {
-          card.style.display = 'none';
-        }
+        card.style.display = (coincideBusqueda && coincideEstado) ? 'block' : 'none';
       });
     }
 
@@ -296,7 +302,6 @@
       if ((val.startsWith('ChIJ') || val.startsWith('GhIJ')) && !val.includes('/')) {
         input.value = `https://search.google.com/local/writereview?placeid=${val}`;
       }
-
       validarEnlace(id);
     }
 
@@ -326,16 +331,7 @@
       navigator.clipboard.writeText(val).then(() => {
         const textoOriginal = btnCopy.innerText;
         btnCopy.innerText = '¡Copiado! ✓';
-        btnCopy.style.background = '#e6f4ea';
-        btnCopy.style.color = '#137333';
-
-        setTimeout(() => {
-          btnCopy.innerText = textoOriginal;
-          btnCopy.style.background = '';
-          btnCopy.style.color = '';
-        }, 1500);
-      }).catch((err) => {
-        console.error('Error al copiar:', err);
+        setTimeout(() => { btnCopy.innerText = textoOriginal; }, 1500);
       });
     }
 
@@ -344,36 +340,21 @@
       const btnPaste = document.getElementById(`btn-paste-${id}`);
 
       navigator.clipboard.readText().then((texto) => {
-        if (!texto) {
-          alert('El portapapeles está vacío.');
-          return;
-        }
-
+        if (!texto) return alert('El portapapeles está vacío.');
         input.value = texto.trim();
         manejarEntradaUrl(id);
         formatearSalida(id);
-
         const textoOriginal = btnPaste.innerText;
         btnPaste.innerText = '¡Pegado! ✓';
-
-        setTimeout(() => {
-          btnPaste.innerText = textoOriginal;
-        }, 1500);
-      }).catch((err) => {
-        alert('Permiso denegado para leer el portapapeles o navegador no compatible.');
-        console.error('Error al pegar:', err);
+        setTimeout(() => { btnPaste.innerText = textoOriginal; }, 1500);
       });
     }
 
     function vaciarCampo(id) {
       const input = document.getElementById(`input-${id}`);
-      const val = input.value.trim();
-
-      if (val.length > 0) {
-        const confirmar = confirm(`¿Estás seguro de que querés borrar el enlace del Cartel #${id}?`);
-        if (!confirmar) return;
+      if (input.value.trim().length > 0) {
+        if (!confirm(`¿Estás seguro de que querés borrar el enlace del Cartel #${id}?`)) return;
       }
-
       input.value = '';
       validarEnlace(id);
       input.focus();
@@ -383,7 +364,6 @@
       const input = document.getElementById(`input-${id}`);
       const warnBox = document.getElementById(`warn-${id}`);
       const val = input.value.trim();
-
       let errorMsg = '';
 
       if (val.length > 0) {
@@ -404,15 +384,14 @@
       }
     }
 
-    function sincronizarConGoogleSheet(cartelId, url, usuarioEmail) {
-      if (!GOOGLE_SHEET_WEB_APP_URL || GOOGLE_SHEET_WEB_APP_URL === "") {
-        console.warn("Falta configurar la URL de Google Apps Script.");
-        return;
-      }
+    function sincronizarConGoogleSheet(cartelId, url, direccion, zona, usuarioEmail) {
+      if (!GOOGLE_SHEET_WEB_APP_URL) return;
 
       const payload = {
         cartelId: cartelId,
         url: url,
+        direccion: direccion,
+        zona: zona,
         usuarioEmail: usuarioEmail,
         usuario: usuarioEmail
       };
@@ -420,13 +399,9 @@
       fetch(GOOGLE_SHEET_WEB_APP_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }).catch((err) => {
-        console.error('Error sincronizando con Google Sheets:', err);
-      });
+      }).catch((err) => console.error('Error enviando a Google Sheets:', err));
     }
 
     function guardarCartel(id) {
@@ -437,25 +412,38 @@
         return;
       }
 
-      const userEmail = user.email;
-
       const card = document.getElementById(`card-${id}`);
       const input = document.getElementById(`input-${id}`);
+      const dirInput = document.getElementById(`direccion-${id}`);
+      const zonaInput = document.getElementById(`zona-${id}`);
+      
       const btn = document.getElementById(`btn-${id}`);
       const statusSpan = document.getElementById(`status-${id}`);
-      const msgBox = document.getElementById(`msg-${id}`);
+      msgBox = document.getElementById(`msg-${id}`);
       
       formatearSalida(id);
 
       const url = input.value.replace(/\s+/g, '');
+      const direccion = dirInput.value.trim();
+      const zona = zonaInput.value.trim();
+
       input.value = url;
 
       btn.disabled = true;
       msgBox.style.color = '#1a73e8';
       msgBox.innerText = 'Sincronizando...';
+
+      const datosAguardar = {
+        url: url,
+        direccion: direccion,
+        zona: zona
+      };
+
+      // Activar conexión solo para guardar
+      db.goOnline();
       
-      db.ref('usuarios/' + user.uid + '/carteles/' + id).set(url).then(() => {
-        sincronizarConGoogleSheet(id, url, userEmail);
+      db.ref('usuarios/' + user.uid + '/carteles/' + id).set(datosAguardar).then(() => {
+        sincronizarConGoogleSheet(id, url, direccion, zona, user.email);
 
         btn.disabled = false;
         msgBox.style.color = '#1e8e3e';
@@ -468,11 +456,16 @@
         aplicarFiltros();
 
         setTimeout(() => { msgBox.innerText = ''; }, 2500);
+        
+        // Volver a desconectar para liberar la conexión activa
+        setTimeout(() => { db.goOffline(); }, 1000);
+
       }).catch((err) => {
         btn.disabled = false;
         msgBox.style.color = '#d93025';
         msgBox.innerText = 'Error al sincronizar.';
         console.error(err);
+        setTimeout(() => { db.goOffline(); }, 1000);
       });
     }
   </script>
