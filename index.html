@@ -127,7 +127,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <script>
-    const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzPxjUwlVCmsmyTkb6bZG9hPveYe3SR_1v8HxV5FMvXbp34fNY-3TqovHzEW0BIqFqxTQ/exec";
+    const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwJnBC7ksOu0-WC8VsLiC6PaB0A24uLR7BT8A6UGiBRYhWtrmzd0UAvyjWMhbdldIk2vw/exec";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCC3zrf5vYbgM7lA7ULEBE_e1bGCtt6Krg",
@@ -384,16 +384,17 @@
       }
     }
 
-    function sincronizarConGoogleSheet(cartelId, url, direccion, zona, usuarioEmail) {
+    function sincronizarConGoogleSheet(cartelId, url, direccion, zona, usuarioEmail, accion) {
       if (!GOOGLE_SHEET_WEB_APP_URL) return;
 
       const payload = {
-        cartelId: cartelId,
-        url: url,
+        cartelId: `Cartel #${cartelId}`,
+        estado: url ? 'Asignado' : 'Libre',
         direccion: direccion,
         zona: zona,
+        link: url,
         usuarioEmail: usuarioEmail,
-        usuario: usuarioEmail
+        accion: accion || (url || direccion || zona ? "Actualización" : "Vacado")
       };
 
       fetch(GOOGLE_SHEET_WEB_APP_URL, {
@@ -419,7 +420,7 @@
       
       const btn = document.getElementById(`btn-${id}`);
       const statusSpan = document.getElementById(`status-${id}`);
-      msgBox = document.getElementById(`msg-${id}`);
+      const msgBox = document.getElementById(`msg-${id}`);
       
       formatearSalida(id);
 
@@ -443,7 +444,7 @@
       db.goOnline();
       
       db.ref('usuarios/' + user.uid + '/carteles/' + id).set(datosAguardar).then(() => {
-        sincronizarConGoogleSheet(id, url, direccion, zona, user.email);
+        sincronizarConGoogleSheet(id, url, direccion, zona, user.email, url ? "Sincronizado" : "Vacado");
 
         btn.disabled = false;
         msgBox.style.color = '#1e8e3e';
