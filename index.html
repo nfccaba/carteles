@@ -413,7 +413,8 @@
       const payload = {
         cartelId: cartelId,
         url: url,
-        usuarioEmail: usuarioEmail
+        usuarioEmail: usuarioEmail,
+        usuario: usuarioEmail
       };
 
       fetch(GOOGLE_SHEET_WEB_APP_URL, {
@@ -429,7 +430,15 @@
     }
 
     function guardarCartel(id) {
-      if (!usuarioActual) return;
+      const user = auth.currentUser;
+      if (!user) {
+        alert("La sesión expiró. Por favor ingresá nuevamente.");
+        location.reload();
+        return;
+      }
+
+      const userEmail = user.email;
+
       const card = document.getElementById(`card-${id}`);
       const input = document.getElementById(`input-${id}`);
       const btn = document.getElementById(`btn-${id}`);
@@ -445,8 +454,8 @@
       msgBox.style.color = '#1a73e8';
       msgBox.innerText = 'Sincronizando...';
       
-      db.ref('usuarios/' + usuarioActual.uid + '/carteles/' + id).set(url).then(() => {
-        sincronizarConGoogleSheet(id, url, usuarioActual.email);
+      db.ref('usuarios/' + user.uid + '/carteles/' + id).set(url).then(() => {
+        sincronizarConGoogleSheet(id, url, userEmail);
 
         btn.disabled = false;
         msgBox.style.color = '#1e8e3e';
@@ -463,6 +472,7 @@
         btn.disabled = false;
         msgBox.style.color = '#d93025';
         msgBox.innerText = 'Error al sincronizar.';
+        console.error(err);
       });
     }
   </script>
