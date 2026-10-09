@@ -3,464 +3,66 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Carteles QR</title>
+  <title>Redirigiendo...</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-    body { background: #f4f6f8; padding: 20px; color: #333; }
-    .container { max-width: 500px; margin: 0 auto; }
-    h1 { font-size: 22px; margin-bottom: 15px; text-align: center; color: #1a73e8; }
-    
-    .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .card-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 16px; margin-bottom: 10px; }
-    
-    input[type="url"], input[type="email"], input[type="password"], input[type="text"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; margin-bottom: 6px; }
-    input.input-error { border-color: #d93025; background-color: #fce8e6; }
-
-    .search-box { position: sticky; top: 10px; z-index: 100; background: #ffffff; padding: 12px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin-bottom: 15px; border: 1px solid #e0e0e0; }
-    .search-box-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-    .search-box label { font-size: 12px; font-weight: bold; color: #5f6368; display: block; }
-
-    /* FILTROS POR ESTADO */
-    .filter-tools { display: flex; gap: 6px; }
-    .btn-filter { flex: 1; padding: 6px 4px; border: 1px solid #dadce0; background: #f8f9fa; color: #3c4043; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; text-align: center; }
-    .btn-filter.active { background: #1a73e8; color: #ffffff; border-color: #1a73e8; }
-
-    .btn-finder {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      background-color: #e8f0fe;
-      color: #1a73e8;
-      border: 1px solid #1a73e8;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: bold;
-      text-decoration: none;
-      transition: background-color 0.2s, color 0.2s;
-    }
-    .btn-finder:hover {
-      background-color: #1a73e8;
-      color: #ffffff;
-    }
-
-    .hint-box {
-      font-size: 11px;
-      color: #5f6368;
-      background: #f8f9fa;
-      padding: 6px 8px;
-      border-radius: 6px;
-      margin-bottom: 8px;
-      line-height: 1.4;
-      border-left: 3px solid #1a73e8;
-    }
-
-    .quick-tools { display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 8px; }
-    .btn-quick { background: #f1f3f4; color: #3c4043; border: 1px solid #dadce0; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; }
-    .btn-quick:active { background: #e8eaed; }
-    .btn-copy { background: #e8f0fe; color: #1a73e8; border-color: #d2e3fc; }
-    .btn-paste { background: #e6f4ea; color: #137333; border-color: #ceead6; }
-    .btn-clear { background: #fce8e6; color: #c5221f; border-color: #fad2cf; }
-
-    button { width: 100%; background: #1a73e8; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; margin-bottom: 5px; }
-    button.logout { background: #d93025; }
-    button:active { opacity: 0.8; }
-    button:disabled { background: #9aa0a6; cursor: not-allowed; }
-
-    .status { font-size: 12px; font-weight: normal; }
-    .msg-feedback { font-size: 12px; font-weight: bold; text-align: center; margin-top: 4px; height: 16px; }
-    .warning-box { color: #b06000; font-size: 11px; font-weight: 600; margin-bottom: 6px; display: none; }
-    .user-info { display: flex; justify-content: space-between; align-items: center; background: #e8f0fe; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; }
-    
-    #login-box { display: block; }
-    #panel-box { display: none; }
+    body { font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f4f6f8; text-align: center; }
+    .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 90%; width: 350px; }
+    h2 { color: #333; font-size: 18px; margin-bottom: 10px; }
+    p { color: #666; font-size: 14px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Panel de Carteles QR</h1>
-
-    <!-- PANTALLA DE LOGIN -->
-    <div id="login-box" class="card">
-      <h2 style="font-size: 16px; margin-bottom: 15px; text-align: center;">Iniciar Sesión</h2>
-      <form id="form-login" onsubmit="iniciarSesion(event)">
-        <input type="email" id="email" placeholder="Correo Electrónico" required autocomplete="username">
-        <input type="password" id="password" placeholder="Contraseña" required autocomplete="current-password">
-        <button type="submit" id="btn-ingresar">Ingresar</button>
-      </form>
-      <p id="error-login" style="color: red; font-size: 12px; margin-top: 10px; text-align: center; font-weight: bold;"></p>
-    </div>
-
-    <!-- PANTALLA DEL PANEL -->
-    <div id="panel-box">
-      <div class="user-info">
-        <span id="user-email">Cargando...</span>
-        <button class="logout" style="width: auto; padding: 5px 10px; margin: 0;" onclick="cerrarSesion()">Salir</button>
-      </div>
-
-      <!-- BUSCADOR RÁPIDO Y FILTROS -->
-      <div class="search-box">
-        <div class="search-box-header">
-          <label for="buscar-cartel">🔍 Buscar por Número, Dirección o Zona:</label>
-          <a href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder" 
-             target="_blank" 
-             class="btn-finder" 
-             title="Abrir buscador de Place ID de Google">
-             📍 BUSCADOR ID
-          </a>
-        </div>
-        <input type="text" id="buscar-cartel" placeholder="Ej: 5, Av. Rivadavia, Palermo..." oninput="aplicarFiltros()">
-        
-        <div class="filter-tools">
-          <button class="btn-filter active" id="filter-todos" onclick="setFiltroEstado('todos')">Todos</button>
-          <button class="btn-filter" id="filter-asignados" onclick="setFiltroEstado('asignados')">✅ Asignados</button>
-          <button class="btn-filter" id="filter-libres" onclick="setFiltroEstado('libres')">⚪ Libres</button>
-        </div>
-      </div>
-
-      <div id="lista-carteles">Cargando carteles...</div>
-    </div>
+  <div class="box">
+    <h2 id="titulo">Redirigiendo...</h2>
+    <p id="mensaje">Aguarde un momento por favor.</p>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <script>
-    const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwJnBC7ksOu0-WC8VsLiC6PaB0A24uLR7BT8A6UGiBRYhWtrmzd0UAvyjWMhbdldIk2vw/exec";
-
     const firebaseConfig = {
-      apiKey: "AIzaSyCC3zrf5vYbgM7lA7ULEBE_e1bGCtt6Krg",
-      authDomain: "nfccaba-5e8d5.firebaseapp.com",
-      databaseURL: "https://nfccaba-5e8d5-default-rtdb.firebaseio.com",
-      projectId: "nfccaba-5e8d5",
-      storageBucket: "nfccaba-5e8d5.firebasestorage.app",
-      messagingSenderId: "104003409871",
-      appId: "1:104003409871:web:eb477d997538e01de3e4ba",
-      measurementId: "G-B1BNGY8WSC"
+      databaseURL: "https://nfccaba-5e8d5-default-rtdb.firebaseio.com"
     };
 
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
     }
-    const auth = firebase.auth();
     const db = firebase.database();
 
-    let usuarioActual = null;
-    let filtroEstadoActual = 'todos';
+    const urlParams = new URLSearchParams(window.location.search);
+    const vendedor = urlParams.get('vendedor');
+    const id = urlParams.get('id');
 
-    window.addEventListener('beforeunload', () => {
-      db.goOffline();
-    });
-
-    auth.onAuthStateChanged((user) => {
-      if (user) {
-        usuarioActual = user;
-        document.getElementById('login-box').style.display = 'none';
-        document.getElementById('panel-box').style.display = 'block';
-        document.getElementById('user-email').innerText = user.email;
-        cargarCarteles(user.uid);
-      } else {
-        usuarioActual = null;
-        document.getElementById('login-box').style.display = 'block';
-        document.getElementById('panel-box').style.display = 'none';
-        db.goOffline();
-      }
-    });
-
-    function iniciarSesion(event) {
-      if (event) event.preventDefault();
-      db.goOnline();
-      
-      const email = document.getElementById('email').value.trim();
-      const pass = document.getElementById('password').value.trim();
-      const errBox = document.getElementById('error-login');
-      const btn = document.getElementById('btn-ingresar');
-
-      errBox.innerText = 'Verificando...';
-      btn.disabled = true;
-
-      if (!email || !pass) {
-        errBox.innerText = 'Ingresá correo y contraseña.';
-        btn.disabled = false;
-        return;
-      }
-
-      auth.signInWithEmailAndPassword(email, pass)
-        .then(() => { 
-          errBox.innerText = ''; 
-          btn.disabled = false;
-        })
-        .catch((err) => {
-          btn.disabled = false;
-          errBox.innerText = "Correo o contraseña incorrectos.";
-        });
-    }
-
-    function cerrarSesion() {
-      auth.signOut();
-      db.goOffline();
-    }
-
-    function cargarCarteles(uid) {
-      const contenedor = document.getElementById('lista-carteles');
-      db.goOnline();
-
-      db.ref('usuarios/' + uid + '/carteles').once('value').then((snapshot) => {
-        const data = snapshot.val() || {};
-        contenedor.innerHTML = '';
+    if (vendedor && id) {
+      db.ref('usuarios/' + vendedor + '/carteles/' + id).once('value', function(snapshot) {
+        var destino = snapshot.val();
         
-        for (let i = 1; i <= 150; i++) {
-          const id = String(i).padStart(3, '0');
-          const itemData = data[id] || {};
+        if (destino && typeof destino === 'string' && destino.trim() !== '') {
+          destino = destino.trim();
           
-          // Compatibilidad: lee tanto si está guardado como string simple o como objeto
-          const urlActual = typeof itemData === 'string' ? itemData : (itemData.url || '');
-          const direccionActual = typeof itemData === 'object' ? (itemData.direccion || '') : '';
-          const zonaActual = typeof itemData === 'object' ? (itemData.zona || '') : '';
-          
-          const card = document.createElement('div');
-          card.className = 'card cartel-item';
-          card.id = `card-${id}`;
-          card.setAttribute('data-id', id);
-          card.setAttribute('data-num', i);
-          card.setAttribute('data-status', urlActual ? 'asignado' : 'libre');
-          card.innerHTML = `
-            <div class="card-header">
-              <span>Cartel #${id}</span>
-              <span class="status" id="status-${id}">${urlActual ? '✅ Asignado' : '⚪ Libre'}</span>
-            </div>
-            
-            <input type="text" id="direccion-${id}" value="${direccionActual}" placeholder="📍 Dirección (ej. Av. Corrientes 1234)" style="margin-bottom: 6px;">
-            <input type="text" id="zona-${id}" value="${zonaActual}" placeholder="🏙️ Zona / Barrio (ej. Centro, Palermo)" style="margin-bottom: 8px;">
+          if (!destino.startsWith('http://') && !destino.startsWith('https://')) {
+            destino = 'https://' + destino;
+          }
 
-            <div class="hint-box">
-              💡 <b>Auto-formato:</b> Pegá el <code>Place ID</code> o escribí <code>@usuario</code> de Instagram.
-            </div>
-
-            <div class="quick-tools">
-              <button class="btn-quick btn-copy" id="btn-copy-${id}" onclick="copiarLink('${id}')">📋 Copiar</button>
-              <button class="btn-quick btn-paste" id="btn-paste-${id}" onclick="pegarLink('${id}')">📥 Pegar</button>
-              <button class="btn-quick btn-clear" onclick="vaciarCampo('${id}')">Vaciar</button>
-            </div>
-
-            <input type="text" id="input-${id}" value="${urlActual}" placeholder="Place ID (ChIJ...), @usuario o https://..." oninput="manejarEntradaUrl('${id}')" onblur="formatearSalida('${id}')">
-            <div class="warning-box" id="warn-${id}"></div>
-            <button id="btn-${id}" onclick="guardarCartel('${id}')">Sincronizar</button>
-            <div class="msg-feedback" id="msg-${id}"></div>
-          `;
-          contenedor.appendChild(card);
+          try {
+            var urlValida = new URL(destino);
+            window.location.href = urlValida.href;
+          } catch(e) {
+            document.getElementById('titulo').innerText = 'Enlace no válido';
+            document.getElementById('mensaje').innerText = 'El enlace asignado a este cartel no tiene un formato web válido.';
+          }
+        } else {
+          document.getElementById('titulo').innerText = 'Cartel #' + id;
+          document.getElementById('mensaje').innerText = 'Este cartel aún no está activado por un comercio.';
         }
-        aplicarFiltros();
-        setTimeout(() => { db.goOffline(); }, 1000);
-
-      }).catch((err) => {
-        console.error("Error al obtener datos de Firebase:", err);
-        contenedor.innerHTML = '<p style="color:red; text-align:center;">Error al cargar datos.</p>';
+      }, function(error) {
+        document.getElementById('titulo').innerText = 'Error de conexión';
+        document.getElementById('mensaje').innerText = error.message;
       });
-    }
-
-    function setFiltroEstado(tipo) {
-      filtroEstadoActual = tipo;
-      document.querySelectorAll('.btn-filter').forEach(btn => btn.classList.remove('active'));
-      document.getElementById(`filter-${tipo}`).classList.add('active');
-      aplicarFiltros();
-    }
-
-    function aplicarFiltros() {
-      const query = document.getElementById('buscar-cartel').value.trim().toLowerCase();
-      const carteles = document.querySelectorAll('.cartel-item');
-
-      carteles.forEach((card) => {
-        const id = card.getAttribute('data-id');
-        const num = card.getAttribute('data-num');
-        const status = card.getAttribute('data-status');
-        
-        const direccion = (document.getElementById(`direccion-${id}`)?.value || '').toLowerCase();
-        const zona = (document.getElementById(`zona-${id}`)?.value || '').toLowerCase();
-
-        const coincideBusqueda = !query || 
-          id.includes(query) || 
-          num === query || 
-          direccion.includes(query) || 
-          zona.includes(query);
-
-        let coincideEstado = true;
-        if (filtroEstadoActual === 'asignados') coincideEstado = (status === 'asignado');
-        else if (filtroEstadoActual === 'libres') coincideEstado = (status === 'libre');
-
-        card.style.display = (coincideBusqueda && coincideEstado) ? 'block' : 'none';
-      });
-    }
-
-    function manejarEntradaUrl(id) {
-      const input = document.getElementById(`input-${id}`);
-      let val = input.value.trim();
-
-      if ((val.startsWith('ChIJ') || val.startsWith('GhIJ')) && !val.includes('/')) {
-        input.value = `https://search.google.com/local/writereview?placeid=${val}`;
-      }
-      validarEnlace(id);
-    }
-
-    function formatearSalida(id) {
-      const input = document.getElementById(`input-${id}`);
-      let val = input.value.trim();
-
-      if (val.startsWith('@')) {
-        const usuarioLimpio = val.replace(/^@+/, '').replace(/\/+$/, '');
-        if (usuarioLimpio.length > 0) {
-          input.value = `https://www.instagram.com/${usuarioLimpio}/`;
-        }
-      }
-      validarEnlace(id);
-    }
-
-    function copiarLink(id) {
-      const input = document.getElementById(`input-${id}`);
-      const val = input.value.trim();
-      const btnCopy = document.getElementById(`btn-copy-${id}`);
-
-      if (!val) {
-        alert('No hay ningún enlace cargado para copiar.');
-        return;
-      }
-
-      navigator.clipboard.writeText(val).then(() => {
-        const textoOriginal = btnCopy.innerText;
-        btnCopy.innerText = '¡Copiado! ✓';
-        setTimeout(() => { btnCopy.innerText = textoOriginal; }, 1500);
-      });
-    }
-
-    function pegarLink(id) {
-      const input = document.getElementById(`input-${id}`);
-      const btnPaste = document.getElementById(`btn-paste-${id}`);
-
-      navigator.clipboard.readText().then((texto) => {
-        if (!texto) return alert('El portapapeles está vacío.');
-        input.value = texto.trim();
-        manejarEntradaUrl(id);
-        formatearSalida(id);
-        const textoOriginal = btnPaste.innerText;
-        btnPaste.innerText = '¡Pegado! ✓';
-        setTimeout(() => { btnPaste.innerText = textoOriginal; }, 1500);
-      });
-    }
-
-    function vaciarCampo(id) {
-      const input = document.getElementById(`input-${id}`);
-      if (input.value.trim().length > 0) {
-        if (!confirm(`¿Estás seguro de que querés borrar el enlace del Cartel #${id}?`)) return;
-      }
-      input.value = '';
-      validarEnlace(id);
-      input.focus();
-    }
-
-    function validarEnlace(id) {
-      const input = document.getElementById(`input-${id}`);
-      const warnBox = document.getElementById(`warn-${id}`);
-      const val = input.value.trim();
-      let errorMsg = '';
-
-      if (val.length > 0) {
-        if (val.includes(' ')) {
-          errorMsg = '⚠️ Cuidado: Hay un espacio en blanco en el enlace.';
-        } else if (!val.startsWith('http://') && !val.startsWith('https://')) {
-          errorMsg = '⚠️ Falta el "https://" al inicio del enlace.';
-        }
-      }
-
-      if (errorMsg) {
-        input.classList.add('input-error');
-        warnBox.innerText = errorMsg;
-        warnBox.style.display = 'block';
-      } else {
-        input.classList.remove('input-error');
-        warnBox.style.display = 'none';
-      }
-    }
-
-    function sincronizarConGoogleSheet(cartelId, url, direccion, zona, usuarioEmail, accion) {
-      if (!GOOGLE_SHEET_WEB_APP_URL) return;
-
-      const payload = {
-        cartelId: `Cartel #${cartelId}`,
-        estado: url ? 'Asignado' : 'Libre',
-        direccion: direccion,
-        zona: zona,
-        link: url,
-        usuarioEmail: usuarioEmail,
-        accion: accion || (url || direccion || zona ? "Actualización" : "Vacado")
-      };
-
-      fetch(GOOGLE_SHEET_WEB_APP_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).catch((err) => console.error('Error enviando a Google Sheets:', err));
-    }
-
-    function guardarCartel(id) {
-      const user = auth.currentUser;
-      if (!user) {
-        alert("La sesión expiró. Por favor ingresá nuevamente.");
-        location.reload();
-        return;
-      }
-
-      const card = document.getElementById(`card-${id}`);
-      const input = document.getElementById(`input-${id}`);
-      const dirInput = document.getElementById(`direccion-${id}`);
-      const zonaInput = document.getElementById(`zona-${id}`);
-      
-      const btn = document.getElementById(`btn-${id}`);
-      const statusSpan = document.getElementById(`status-${id}`);
-      const msgBox = document.getElementById(`msg-${id}`);
-      
-      formatearSalida(id);
-
-      const url = input.value.replace(/\s+/g, '');
-      const direccion = dirInput.value.trim();
-      const zona = zonaInput.value.trim();
-
-      input.value = url;
-
-      btn.disabled = true;
-      msgBox.style.color = '#1a73e8';
-      msgBox.innerText = 'Sincronizando...';
-
-      // ⚠️ GUARDADO CLAVE: Guardamos el string directo en Firebase para que r.html lea el link perfecto
-      // Y adjuntamos los metadatos si quieres usarlos, pero el nodo principal almacena el string del link
-      const datosAguardar = url ? url : ""; 
-
-      db.goOnline();
-      
-      db.ref('usuarios/' + user.uid + '/carteles/' + id).set(datosAguardar).then(() => {
-        sincronizarConGoogleSheet(id, url, direccion, zona, user.email, url ? "Sincronizado" : "Vacado");
-
-        btn.disabled = false;
-        msgBox.style.color = '#1e8e3e';
-        msgBox.innerText = '¡Sincronizado con éxito!';
-        
-        statusSpan.innerText = url ? '✅ Asignado' : '⚪ Libre';
-        card.setAttribute('data-status', url ? 'asignado' : 'libre');
-        
-        validarEnlace(id);
-        aplicarFiltros();
-
-        setTimeout(() => { msgBox.innerText = ''; }, 2500);
-        setTimeout(() => { db.goOffline(); }, 1000);
-
-      }).catch((err) => {
-        btn.disabled = false;
-        msgBox.style.color = '#d93025';
-        msgBox.innerText = 'Error al sincronizar.';
-        console.error(err);
-        setTimeout(() => { db.goOffline(); }, 1000);
-      });
+    } else {
+      document.getElementById('titulo').innerText = 'Código no válido';
+      document.getElementById('mensaje').innerText = 'Faltan parámetros en la URL del cartel.';
     }
   </script>
 </body>
