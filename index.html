@@ -122,7 +122,7 @@
     </div>
   </div>
 
-  <!-- IFRAME Y FORMULARIO OCULTO PARA ENVÍO INFALIBLE A GOOGLE SHEETS -->
+  <!-- FORMULARIO OCULTO CON LA APP WEB URL CORRECTA -->
   <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
   <form id="sheet-form" action="https://script.google.com/macros/s/AKfycbyzxH09DX2-9NYFP7KxD3lanc1HArEHnH6KH9mS4UhP3EP6QQKUOYByxbkBjTtI_mei/exec" method="POST" target="hidden_iframe" style="display:none;">
     <input type="hidden" name="cartelId" id="f-cartelId">
@@ -392,7 +392,6 @@
     }
 
     function sincronizarConGoogleSheet(cartelId, url, direccion, zona, usuarioEmail, accion) {
-      // Cargamos los datos en el formulario oculto y lo enviamos por POST nativo
       document.getElementById('f-cartelId').value = `Cartel #${cartelId}`;
       document.getElementById('f-estado').value = url ? 'Asignado' : 'Libre';
       document.getElementById('f-direccion').value = direccion;
@@ -433,13 +432,11 @@
       msgBox.style.color = '#1a73e8';
       msgBox.innerText = 'Sincronizando...';
 
-      // ⚠️ MANTIENE EL STRING PURO PARA QUE LOS QR FUNCIONEN PERFECTAMENTE
       const datosAguardar = url ? url : ""; 
 
       db.goOnline();
       
       db.ref('usuarios/' + user.uid + '/carteles/' + id).set(datosAguardar).then(() => {
-        // Disparamos la sincronización por formulario oculto hacia Google Sheets
         sincronizarConGoogleSheet(id, url, direccion, zona, user.email, url ? "Sincronizado" : "Vacado");
 
         btn.disabled = false;
