@@ -394,10 +394,11 @@
         accion: accion || (url ? "Sincronizado" : "Vacado")
       };
 
+      // CORRECCIÓN CLAVE: Usar text/plain evita bloqueos CORS estrictos con mode: 'no-cors'
       fetch(GOOGLE_SHEET_WEB_APP_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
       }).catch((err) => console.error('Error enviando a Google Sheets:', err));
     }
