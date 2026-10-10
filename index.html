@@ -122,13 +122,23 @@
     </div>
   </div>
 
+  <!-- IFRAME Y FORMULARIO OCULTO PARA ENVÍO INFALIBLE A GOOGLE SHEETS -->
+  <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+  <form id="sheet-form" action="https://script.google.com/macros/s/AKfycbyzxH09DX2-9NYFP7KxD3lanc1HArEHnH6KH9mS4UhP3EP6QQKUOYByxbkBjTtI_mei/exec" method="POST" target="hidden_iframe" style="display:none;">
+    <input type="hidden" name="cartelId" id="f-cartelId">
+    <input type="hidden" name="estado" id="f-estado">
+    <input type="hidden" name="direccion" id="f-direccion">
+    <input type="hidden" name="zona" id="f-zona">
+    <input type="hidden" name="link" id="f-link">
+    <input type="hidden" name="usuarioEmail" id="f-usuarioEmail">
+    <input type="hidden" name="accion" id="f-accion">
+  </form>
+
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <script>
-    const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyzxH09DX2-9NYFP7KxD3lanc1HArEHnH6KH9mS4UhP3EP6QQKUOYByxbkBjTtI_mei/exec";
-
     const firebaseConfig = {
       apiKey: "AIzaSyCC3zrf5vYbgM7lA7ULEBE_e1bGCtt6Krg",
       authDomain: "nfccaba-5e8d5.firebaseapp.com",
@@ -382,25 +392,16 @@
     }
 
     function sincronizarConGoogleSheet(cartelId, url, direccion, zona, usuarioEmail, accion) {
-      if (!GOOGLE_SHEET_WEB_APP_URL) return;
+      // Cargamos los datos en el formulario oculto y lo enviamos por POST nativo
+      document.getElementById('f-cartelId').value = `Cartel #${cartelId}`;
+      document.getElementById('f-estado').value = url ? 'Asignado' : 'Libre';
+      document.getElementById('f-direccion').value = direccion;
+      document.getElementById('f-zona').value = zona;
+      document.getElementById('f-link').value = url;
+      document.getElementById('f-usuarioEmail').value = usuarioEmail;
+      document.getElementById('f-accion').value = accion || (url ? "Sincronizado" : "Vacado");
 
-      const payload = {
-        cartelId: `Cartel #${cartelId}`,
-        estado: url ? 'Asignado' : 'Libre',
-        direccion: direccion,
-        zona: zona,
-        link: url,
-        usuarioEmail: usuarioEmail,
-        accion: accion || (url ? "Sincronizado" : "Vacado")
-      };
-
-      // CORRECCIÓN CLAVE: Usar text/plain evita bloqueos CORS estrictos con mode: 'no-cors'
-      fetch(GOOGLE_SHEET_WEB_APP_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      }).catch((err) => console.error('Error enviando a Google Sheets:', err));
+      document.getElementById('sheet-form').submit();
     }
 
     function guardarCartel(id) {
@@ -438,6 +439,7 @@
       db.goOnline();
       
       db.ref('usuarios/' + user.uid + '/carteles/' + id).set(datosAguardar).then(() => {
+        // Disparamos la sincronización por formulario oculto hacia Google Sheets
         sincronizarConGoogleSheet(id, url, direccion, zona, user.email, url ? "Sincronizado" : "Vacado");
 
         btn.disabled = false;
