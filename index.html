@@ -127,7 +127,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <script>
-    const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwJnBC7ksOu0-WC8VsLiC6PaB0A24uLR7BT8A6UGiBRYhWtrmzd0UAvyjWMhbdldIk2vw/exec";
+    const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyzxH09DX2-9NYFP7KxD3lanc1HArEHnH6KH9mS4UhP3EP6QQKUOYByxbkBjTtI_mei/exec";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCC3zrf5vYbgM7lA7ULEBE_e1bGCtt6Krg",
@@ -214,7 +214,6 @@
           const id = String(i).padStart(3, '0');
           const itemData = data[id] || {};
           
-          // Compatibilidad: lee tanto si está guardado como string simple o como objeto
           const urlActual = typeof itemData === 'string' ? itemData : (itemData.url || '');
           const direccionActual = typeof itemData === 'object' ? (itemData.direccion || '') : '';
           const zonaActual = typeof itemData === 'object' ? (itemData.zona || '') : '';
@@ -392,7 +391,7 @@
         zona: zona,
         link: url,
         usuarioEmail: usuarioEmail,
-        accion: accion || (url || direccion || zona ? "Actualización" : "Vacado")
+        accion: accion || (url ? "Sincronizado" : "Vacado")
       };
 
       fetch(GOOGLE_SHEET_WEB_APP_URL, {
@@ -432,8 +431,7 @@
       msgBox.style.color = '#1a73e8';
       msgBox.innerText = 'Sincronizando...';
 
-      // ⚠️ GUARDADO CLAVE: Guardamos el string directo en Firebase para que r.html lea el link perfecto
-      // Y adjuntamos los metadatos si quieres usarlos, pero el nodo principal almacena el string del link
+      // ⚠️ MANTIENE EL STRING PURO PARA QUE LOS QR FUNCIONEN PERFECTAMENTE
       const datosAguardar = url ? url : ""; 
 
       db.goOnline();
